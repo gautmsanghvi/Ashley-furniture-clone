@@ -1,3 +1,0 @@
-to run open terminal and navigate to : cd "D:\NewDownloads\project-bolt-sb1-horw2zrp (1)\project"
-then do npm install
-then npm run dev
