@@ -81,4 +81,4 @@ Product data is currently stored locally for simplicity.
 The architecture supports easy migration to a full backend or database-driven product system.
 
 👨‍💻 Author
-Gautam Sanghvi
+Gautm Sanghvi
