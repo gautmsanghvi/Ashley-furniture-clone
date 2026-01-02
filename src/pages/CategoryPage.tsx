@@ -1,21 +1,80 @@
-import { Link } from 'react-router-dom';
-import { ChevronDown, SlidersHorizontal } from 'lucide-react';
+import { Link } from "react-router-dom";
+import { useState } from "react";
+import { ChevronDown, SlidersHorizontal } from "lucide-react";
+
+interface Product {
+  id: number;
+  name: string;
+  price: number;
+  image: string;
+  rating: number;
+  reviews: number;
+  inStock?: boolean;
+  color?: string;
+  material?: string;
+}
 
 interface CategoryPageProps {
   title: string;
   description: string;
-  products: Array<{
-    id: number;
-    name: string;
-    price: number;
-    image: string;
-    rating: number;
-    reviews: number;
-    inStock?: boolean;
-  }>;
+  products: Product[];
 }
 
-export default function CategoryPage({ title, description, products }: CategoryPageProps) {
+export default function CategoryPage({
+  title,
+  description,
+  products,
+}: CategoryPageProps) {
+  const [filters, setFilters] = useState({
+    priceRange: [] as string[],
+    colors: [] as string[],
+    materials: [] as string[],
+  });
+
+  const toggleFilter = (key: keyof typeof filters, value: string) => {
+    setFilters((prev) => ({
+      ...prev,
+      [key]: prev[key].includes(value)
+        ? prev[key].filter((v) => v !== value)
+        : [...prev[key], value],
+    }));
+  };
+
+  const filteredProducts = products.filter((product) => {
+    // PRICE
+    if (filters.priceRange.length) {
+      const matchPrice = filters.priceRange.some((range) => {
+        if (range === "under-500") return product.price < 500;
+        if (range === "500-1000")
+          return product.price >= 500 && product.price <= 1000;
+        if (range === "1000-2000")
+          return product.price >= 1000 && product.price <= 2000;
+        if (range === "2000+") return product.price > 2000;
+        return false;
+      });
+      if (!matchPrice) return false;
+    }
+
+    // COLOR
+    if (
+      filters.colors.length &&
+      (!product.color || !filters.colors.includes(product.color))
+    ) {
+      return false;
+    }
+
+    // MATERIAL
+    if (
+      filters.materials.length &&
+      (!product.material ||
+        !filters.materials.includes(product.material))
+    ) {
+      return false;
+    }
+
+    return true;
+  });
+
   return (
     <div className="bg-gray-50 min-h-screen">
       <div className="bg-white border-b">
@@ -27,6 +86,7 @@ export default function CategoryPage({ title, description, products }: CategoryP
 
       <div className="max-w-7xl mx-auto px-4 py-8">
         <div className="flex gap-8">
+          {/* FILTER SIDEBAR */}
           <aside className="w-64 flex-shrink-0">
             <div className="bg-white rounded-lg shadow-sm p-6 sticky top-24">
               <div className="flex items-center gap-2 mb-6">
@@ -35,146 +95,95 @@ export default function CategoryPage({ title, description, products }: CategoryP
               </div>
 
               <div className="space-y-6">
+                {/* PRICE */}
                 <div>
-                  <button className="flex items-center justify-between w-full font-semibold mb-3">
-                    <span>Price Range</span>
-                    <ChevronDown className="w-4 h-4" />
-                  </button>
-                  <div className="space-y-2">
-                    <label className="flex items-center gap-2">
-                      <input type="checkbox" className="rounded" />
-                      <span className="text-sm">Under $500</span>
+                  <p className="font-semibold mb-3">Price Range</p>
+                  {[
+                    { label: "Under $500", value: "under-500" },
+                    { label: "$500 - $1000", value: "500-1000" },
+                    { label: "$1000 - $2000", value: "1000-2000" },
+                    { label: "$2000+", value: "2000+" },
+                  ].map((p) => (
+                    <label key={p.value} className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={filters.priceRange.includes(p.value)}
+                        onChange={() =>
+                          toggleFilter("priceRange", p.value)
+                        }
+                      />
+                      <span className="text-sm">{p.label}</span>
                     </label>
-                    <label className="flex items-center gap-2">
-                      <input type="checkbox" className="rounded" />
-                      <span className="text-sm">$500 - $1000</span>
-                    </label>
-                    <label className="flex items-center gap-2">
-                      <input type="checkbox" className="rounded" />
-                      <span className="text-sm">$1000 - $2000</span>
-                    </label>
-                    <label className="flex items-center gap-2">
-                      <input type="checkbox" className="rounded" />
-                      <span className="text-sm">$2000+</span>
-                    </label>
-                  </div>
+                  ))}
                 </div>
 
+                {/* COLOR */}
                 <div>
-                  <button className="flex items-center justify-between w-full font-semibold mb-3">
-                    <span>Color</span>
-                    <ChevronDown className="w-4 h-4" />
-                  </button>
-                  <div className="space-y-2">
-                    <label className="flex items-center gap-2">
-                      <input type="checkbox" className="rounded" />
-                      <span className="text-sm">Black</span>
+                  <p className="font-semibold mb-3">Color</p>
+                  {["Gray",
+  "Navy",
+  "Beige",
+  "Charcoal"].map((c) => (
+                    <label key={c} className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={filters.colors.includes(c)}
+                        onChange={() => toggleFilter("colors", c)}
+                      />
+                      <span className="text-sm">{c}</span>
                     </label>
-                    <label className="flex items-center gap-2">
-                      <input type="checkbox" className="rounded" />
-                      <span className="text-sm">Brown</span>
-                    </label>
-                    <label className="flex items-center gap-2">
-                      <input type="checkbox" className="rounded" />
-                      <span className="text-sm">Gray</span>
-                    </label>
-                    <label className="flex items-center gap-2">
-                      <input type="checkbox" className="rounded" />
-                      <span className="text-sm">White</span>
-                    </label>
-                  </div>
+                  ))}
                 </div>
 
+                {/* MATERIAL */}
                 <div>
-                  <button className="flex items-center justify-between w-full font-semibold mb-3">
-                    <span>Material</span>
-                    <ChevronDown className="w-4 h-4" />
-                  </button>
-                  <div className="space-y-2">
-                    <label className="flex items-center gap-2">
-                      <input type="checkbox" className="rounded" />
-                      <span className="text-sm">Fabric</span>
+                  <p className="font-semibold mb-3">Material</p>
+                  {["Fabric", "Leather", "Wood", "Metal"].map((m) => (
+                    <label key={m} className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={filters.materials.includes(m)}
+                        onChange={() =>
+                          toggleFilter("materials", m)
+                        }
+                      />
+                      <span className="text-sm">{m}</span>
                     </label>
-                    <label className="flex items-center gap-2">
-                      <input type="checkbox" className="rounded" />
-                      <span className="text-sm">Leather</span>
-                    </label>
-                    <label className="flex items-center gap-2">
-                      <input type="checkbox" className="rounded" />
-                      <span className="text-sm">Wood</span>
-                    </label>
-                    <label className="flex items-center gap-2">
-                      <input type="checkbox" className="rounded" />
-                      <span className="text-sm">Metal</span>
-                    </label>
-                  </div>
+                  ))}
                 </div>
-
-                <button className="w-full bg-gray-900 text-white py-2 rounded-lg hover:bg-gray-800 transition">
-                  Apply Filters
-                </button>
               </div>
             </div>
           </aside>
 
+          {/* PRODUCTS */}
           <main className="flex-1">
-            <div className="bg-white rounded-lg shadow-sm p-4 mb-6 flex items-center justify-between">
-              <p className="text-gray-600">{products.length} Products</p>
-              <div className="flex items-center gap-4">
-                <span className="text-sm text-gray-600">Sort by:</span>
-                <select className="border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-700">
-                  <option>Featured</option>
-                  <option>Price: Low to High</option>
-                  <option>Price: High to Low</option>
-                  <option>Newest</option>
-                  <option>Best Selling</option>
-                </select>
-              </div>
+            <div className="bg-white rounded-lg shadow-sm p-4 mb-6">
+              <p className="text-gray-600">
+                {filteredProducts.length} Products
+              </p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {products.map((product) => (
+              {filteredProducts.map((product) => (
                 <Link
                   key={product.id}
                   to={`/product/${product.id}`}
-                  className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-xl transition group"
+                  className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-xl transition"
                 >
-                  <div className="aspect-square overflow-hidden relative bg-gray-100">
+                  <div className="aspect-square bg-gray-100">
                     <img
                       src={product.image}
                       alt={product.name}
-                      className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).src = 'https://via.placeholder.com/300?text=Product';
-                      }}
+                      className="w-full h-full object-cover"
                     />
-                    {product.inStock === false && (
-                      <div className="absolute inset-0 bg-black bg-opacity-40 flex items-center justify-center">
-                        <span className="bg-red-600 text-white px-4 py-2 rounded-lg font-bold text-lg">
-                          Out of Stock
-                        </span>
-                      </div>
-                    )}
                   </div>
                   <div className="p-4">
-                    <h3 className="font-semibold text-lg mb-2">{product.name}</h3>
-                    <div className="flex items-center gap-2 mb-2">
-                      <div className="flex">
-                        {[...Array(5)].map((_, i) => (
-                          <span key={i} className={i < product.rating ? 'text-yellow-400' : 'text-gray-300'}>
-                            ★
-                          </span>
-                        ))}
-                      </div>
-                      <span className="text-sm text-gray-600">({product.reviews})</span>
-                    </div>
-                    <p className="text-2xl font-bold text-orange-600">${product.price.toLocaleString()}</p>
-                    <button
-                      disabled={product.inStock === false}
-                      className="w-full mt-4 bg-orange-600 text-white py-2 rounded-lg hover:bg-orange-700 transition disabled:bg-gray-400 disabled:cursor-not-allowed"
-                    >
-                      {product.inStock === false ? 'Out of Stock' : 'Add to Cart'}
-                    </button>
+                    <h3 className="font-semibold text-lg mb-2">
+                      {product.name}
+                    </h3>
+                    <p className="text-2xl font-bold text-orange-600">
+                      ${product.price.toLocaleString()}
+                    </p>
                   </div>
                 </Link>
               ))}
