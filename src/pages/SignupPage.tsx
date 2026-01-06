@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
 import { Mail, Lock, User, Eye, EyeOff, AlertCircle } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 export default function SignupPage() {
   const { signup, user, loading } = useAuth();
@@ -16,30 +16,27 @@ export default function SignupPage() {
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
-  // ✅ redirect ONLY after auth state is known
+  // ✅ redirect AFTER render
   useEffect(() => {
     if (!loading && user) {
       navigate('/');
     }
   }, [user, loading, navigate]);
 
-  // 🔒 wait for auth hydration
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p className="text-gray-600">Loading...</p>
-      </div>
-    );
+    return <div className="min-h-screen flex items-center justify-center">Loading…</div>;
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
-    if (!name.trim()) return setError('Enter your full name');
-    if (!email.trim()) return setError('Enter your email');
-    if (password.length < 6) return setError('Password must be at least 6 characters');
-    if (password !== confirmPassword) return setError('Passwords do not match');
+    if (!name || !email || !password) {
+      return setError('All fields are required');
+    }
+    if (password !== confirmPassword) {
+      return setError('Passwords do not match');
+    }
 
     try {
       setSubmitting(true);
@@ -54,76 +51,63 @@ export default function SignupPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
-      <div className="w-full max-w-md">
-        <div className="bg-white rounded-lg shadow-lg p-8">
-          <h1 className="text-3xl font-bold text-center mb-2">Create Account</h1>
-          <p className="text-center text-gray-600 mb-8">
-            Join Ashley Furniture today
-          </p>
+      <div className="w-full max-w-md bg-white rounded-lg shadow-lg p-8">
+        <h1 className="text-3xl font-bold text-center mb-2">Create Account</h1>
+        <p className="text-center text-gray-600 mb-8">Join Ashley Furniture</p>
 
-          {error && (
-            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex gap-2">
-              <AlertCircle className="w-5 h-5 text-red-600" />
-              <p className="text-red-700 text-sm">{error}</p>
-            </div>
-          )}
+        {error && (
+          <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 text-sm flex gap-2">
+            <AlertCircle />
+            {error}
+          </div>
+        )}
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="text-sm font-semibold">Full Name</label>
-              <input
-                value={name}
-                onChange={e => setName(e.target.value)}
-                className="w-full px-4 py-3 border rounded-lg"
-              />
-            </div>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <input
+            placeholder="Full Name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            className="w-full px-4 py-3 border rounded-lg"
+          />
 
-            <div>
-              <label className="text-sm font-semibold">Email</label>
-              <input
-                type="email"
-                value={email}
-                onChange={e => setEmail(e.target.value)}
-                className="w-full px-4 py-3 border rounded-lg"
-              />
-            </div>
+          <input
+            placeholder="Email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className="w-full px-4 py-3 border rounded-lg"
+          />
 
-            <div>
-              <label className="text-sm font-semibold">Password</label>
-              <input
-                type={showPassword ? 'text' : 'password'}
-                value={password}
-                onChange={e => setPassword(e.target.value)}
-                className="w-full px-4 py-3 border rounded-lg"
-              />
-            </div>
+          <input
+            type="password"
+            placeholder="Password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className="w-full px-4 py-3 border rounded-lg"
+          />
 
-            <div>
-              <label className="text-sm font-semibold">Confirm Password</label>
-              <input
-                type={showConfirmPassword ? 'text' : 'password'}
-                value={confirmPassword}
-                onChange={e => setConfirmPassword(e.target.value)}
-                className="w-full px-4 py-3 border rounded-lg"
-              />
-            </div>
+          <input
+            type="password"
+            placeholder="Confirm Password"
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            className="w-full px-4 py-3 border rounded-lg"
+          />
 
-            <button
-              type="submit"
-              disabled={submitting}
-              className="w-full bg-orange-600 text-white py-3 rounded-lg font-semibold"
-            >
-              {submitting ? 'Creating Account…' : 'Create Account'}
-            </button>
-          </form>
+          <button
+            type="submit"
+            disabled={submitting}
+            className="w-full bg-orange-600 text-white py-3 rounded-lg font-semibold"
+          >
+            {submitting ? 'Creating Account…' : 'Create Account'}
+          </button>
+        </form>
 
-          <p className="text-center mt-6 text-gray-600">
-            Already have an account?{' '}
-            <Link to="/login" className="text-orange-600 font-semibold">
-              Sign in
-            </Link>
-          </p>
-        </div>
+        <p className="mt-6 text-center text-gray-600">
+          Already have an account?{' '}
+          <Link to="/login" className="text-orange-600 font-semibold">
+            Login
+          </Link>
+        </p>
       </div>
     </div>
   );
