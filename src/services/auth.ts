@@ -3,7 +3,13 @@ import { createClient } from "@supabase/supabase-js";
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL!;
 const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY!;
 
-export const supabase = createClient(supabaseUrl, supabaseKey);
+export const supabase = createClient(supabaseUrl, supabaseKey, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: true,
+  },
+});
 
 export interface User {
   id: string;
@@ -19,24 +25,16 @@ export async function signUp(
   password: string,
   name: string
 ): Promise<User> {
-  if (!email || !password || !name) {
-    throw new Error("All fields are required");
-  }
-
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
     options: {
-      data: { name }, // stored in auth.users.user_metadata
+      data: { name },
     },
   });
 
-  if (error) {
-    throw error;
-  }
-
-  if (!data.user) {
-    throw new Error("Signup failed");
+  if (error || !data.user) {
+    throw error || new Error("Signup failed");
   }
 
   return {
@@ -58,8 +56,8 @@ export async function signIn(
     password,
   });
 
-  if (error) {
-    throw error;
+  if (error || !data.user) {
+    throw error || new Error("Login failed");
   }
 
   return {
@@ -70,14 +68,11 @@ export async function signIn(
 }
 
 /* =======================
-   GET CURRENT USER
+   CURRENT USER
 ======================= */
 export async function getUserProfile(): Promise<User | null> {
-  const { data, error } = await supabase.auth.getUser();
-
-  if (error || !data.user) {
-    return null;
-  }
+  const { data } = await supabase.auth.getUser();
+  if (!data.user) return null;
 
   return {
     id: data.user.id,
@@ -91,4 +86,23 @@ export async function getUserProfile(): Promise<User | null> {
 ======================= */
 export async function signOut() {
   await supabase.auth.signOut();
+}
+
+/* =======================
+   AUTH STATE LISTENER
+======================= */
+export function onAuthChange(
+  callback: (user: User | null) => void
+) {
+  return supabase.auth.onAuthStateChange((_event, session) => {
+    if (!session?.user) {
+      callback(null);
+    } else {
+      callback({
+        id: session.user.id,
+        email: session.user.email!,
+        name: session.user.user_metadata?.name,
+      });
+    }
+  });
 }

@@ -1,80 +1,95 @@
-import { createContext, useContext, useState, useEffect } from 'react';
-import { signUp as supabaseSignUp, signIn as supabaseSignIn } from '../services/auth';
+import { createContext, useContext, useEffect, useState } from 'react';
+import { supabase } from '../services/auth';
 
 export interface User {
   id: string;
   email: string;
-  name: string;
+  name?: string;
 }
 
 interface AuthContextType {
   user: User | null;
-  isLoading: boolean;
+  loading: boolean;
   login: (email: string, password: string) => Promise<void>;
   signup: (email: string, password: string, name: string) => Promise<void>;
-  logout: () => void;
-  error: string | null;
+  logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
+  // 🔑 Restore session & listen for auth changes
   useEffect(() => {
-    const savedUser = localStorage.getItem('user');
-    if (savedUser) {
-      try {
-        setUser(JSON.parse(savedUser));
-      } catch {
+    const initAuth = async () => {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (session?.user) {
+        setUser({
+          id: session.user.id,
+          email: session.user.email!,
+          name: session.user.user_metadata?.name,
+        });
+      } else {
         setUser(null);
       }
-    }
-    setIsLoading(false);
+
+      setLoading(false);
+    };
+
+    initAuth();
+
+    const { data: listener } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        if (session?.user) {
+          setUser({
+            id: session.user.id,
+            email: session.user.email!,
+            name: session.user.user_metadata?.name,
+          });
+        } else {
+          setUser(null);
+        }
+      }
+    );
+
+    return () => {
+      listener.subscription.unsubscribe();
+    };
   }, []);
 
   const login = async (email: string, password: string) => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const userData = await supabaseSignIn(email, password);
-      setUser(userData);
-      localStorage.setItem('user', JSON.stringify(userData));
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Login failed';
-      setError(errorMessage);
-      throw err;
-    } finally {
-      setIsLoading(false);
-    }
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+    if (error) throw error;
   };
 
   const signup = async (email: string, password: string, name: string) => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const userData = await supabaseSignUp(email, password, name);
-      setUser(userData);
-      localStorage.setItem('user', JSON.stringify(userData));
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Signup failed';
-      setError(errorMessage);
-      throw err;
-    } finally {
-      setIsLoading(false);
-    }
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: { name },
+      },
+    });
+    if (error) throw error;
   };
 
-  const logout = () => {
+  const logout = async () => {
+    await supabase.auth.signOut();
     setUser(null);
-    setError(null);
-    localStorage.removeItem('user');
   };
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, login, signup, logout, error }}>
+    <AuthContext.Provider
+      value={{ user, loading, login, signup, logout }}
+    >
       {children}
     </AuthContext.Provider>
   );
@@ -82,8 +97,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
 export function useAuth() {
   const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
+  if (!context) {
+    throw new Error('useAuth must be used within AuthProvider');
   }
   return context;
 }
